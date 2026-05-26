@@ -1,8 +1,10 @@
+import cmd
 import shlex
 from io import StringIO
 from cowsay import cowsay, list_cows, read_dot_cow
 
 FIELD_SIZE = 10
+WEAPONS = {"sword": 10}
 player_x = 0
 player_y = 0
 monsters = {}
@@ -24,13 +26,17 @@ def is_known_monster(name):
     return name in list_cows() or name == "abcdefgh"
 
 
+def show_monster(name, hello):
+    if name == "abcdefgh":
+        print(cowsay(hello, cowfile=ABCDEFGH_COW), end="")
+    else:
+        print(cowsay(hello, cow=name), end="")
+
+
 def encounter(x, y):
     if (x, y) in monsters:
         name, hello, hp = monsters[(x, y)]
-        if name == "abcdefgh":
-            print(cowsay(hello, cowfile=ABCDEFGH_COW), end="")
-        else:
-            print(cowsay(hello, cow=name), end="")
+        show_monster(name, hello)
 
 
 def move(dx, dy):
@@ -57,43 +63,76 @@ def addmon(args):
         print("Replaced the old monster")
 
 
-def handle_command(line):
-    parts = shlex.split(line)
-    if len(parts) == 0:
+def attack_current_monster(damage):
+    if (player_x, player_y) not in monsters:
+        print("No monster here")
         return
-    command = parts[0]
-    args = parts[1:]
-    if command == "up" and len(args) == 0:
-        move(0, -1)
-    elif command == "down" and len(args) == 0:
-        move(0, 1)
-    elif command == "left" and len(args) == 0:
-        move(-1, 0)
-    elif command == "right" and len(args) == 0:
-        move(1, 0)
-    elif (
-        command == "addmon"
-        and len(args) == 8
-        and args[1] == "hello"
-        and args[3] == "hp"
-        and args[5] == "coords"
-    ):
-        try:
-            addmon(args)
-        except ValueError:
-            print("Invalid arguments")
-    elif command in ("up", "down", "left", "right", "addmon"):
-        print("Invalid arguments")
+    name, hello, hp = monsters[(player_x, player_y)]
+    real_damage = min(damage, hp)
+    hp -= real_damage
+    print(f"Attacked {name}, damage {real_damage} hp")
+    if hp == 0:
+        print(f"{name} died")
+        del monsters[(player_x, player_y)]
     else:
+        monsters[(player_x, player_y)] = (name, hello, hp)
+        print(f"{name} now has {hp}")
+
+
+class MudShell(cmd.Cmd):
+    prompt = ""
+
+    def do_up(self, arg):
+        if arg:
+            print("Invalid arguments")
+        else:
+            move(0, -1)
+
+    def do_down(self, arg):
+        if arg:
+            print("Invalid arguments")
+        else:
+            move(0, 1)
+
+    def do_left(self, arg):
+        if arg:
+            print("Invalid arguments")
+        else:
+            move(-1, 0)
+
+    def do_right(self, arg):
+        if arg:
+            print("Invalid arguments")
+        else:
+            move(1, 0)
+
+    def do_addmon(self, arg):
+        args = shlex.split(arg)
+        if (
+            len(args) == 8
+            and args[1] == "hello"
+            and args[3] == "hp"
+            and args[5] == "coords"
+        ):
+            try:
+                addmon(args)
+            except ValueError:
+                print("Invalid arguments")
+        else:
+            print("Invalid arguments")
+
+    def do_attack(self, arg):
+        if arg:
+            print("Invalid arguments")
+        else:
+            attack_current_monster(10)
+
+    def do_EOF(self, arg):
+        return True
+
+    def default(self, line):
         print("Invalid command")
 
 
 print("<<< Welcome to Python-MUD 0.1 >>>")
-
-while True:
-    try:
-        line = input()
-        handle_command(line)
-    except EOFError:
-        break
-
+MudShell().cmdloop()
