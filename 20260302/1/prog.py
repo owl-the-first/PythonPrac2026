@@ -80,6 +80,7 @@ def handle_command(line):
         print("Invalid command")
 
 
+print("<<< Welcome to Python-MUD 0.1 >>>")
 while True:
     try:
         line = input()
