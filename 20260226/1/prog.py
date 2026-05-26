@@ -1,4 +1,4 @@
-from cowsay import cowsay
+from cowsay import cowsay, list_cows
 
 
 FIELD_SIZE = 10
@@ -10,7 +10,8 @@ monsters = {}
 
 def encounter(x, y):
     if (x, y) in monsters:
-        print(cowsay(monsters[(x, y)]), end="")
+        name, hello = monsters[(x, y)]
+        print(cowsay(hello), end="")
 
 
 def move(dx, dy):
@@ -22,12 +23,16 @@ def move(dx, dy):
 
 
 def addmon(args):
-    x = int(args[0])
-    y = int(args[1])
-    hello = args[2]
+    name = args[0]
+    x = int(args[1])
+    y = int(args[2])
+    hello = args[3]
+    if name not in list_cows():
+        print("Cannot add unknown monster")
+        return
     replaced = (x, y) in monsters
-    monsters[(x, y)] = hello
-    print(f"Added monster to ({x}, {y}) saying {hello}")
+    monsters[(x, y)] = (name, hello)
+    print(f"Added monster {name} to ({x}, {y}) saying {hello}")
     if replaced:
         print("Replaced the old monster")
 
@@ -46,7 +51,7 @@ def handle_command(line):
         move(-1, 0)
     elif command == "right" and len(args) == 0:
         move(1, 0)
-    elif command == "addmon" and len(args) == 3:
+    elif command == "addmon" and len(args) == 4:
         try:
             addmon(args)
         except ValueError:
@@ -63,4 +68,3 @@ while True:
         handle_command(line)
     except EOFError:
         break
-
