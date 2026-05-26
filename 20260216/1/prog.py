@@ -21,11 +21,16 @@ def get_branch_commit(repo, branch):
     return branch_path.read_text().strip()
 
 
-def get_tree_hash(repo, commit_hash):
+def parse_commit(repo, commit_hash):
     commit = read_object(repo, commit_hash).decode()
+    tree_hash = ""
+    parent_hash = ""
     for line in commit.splitlines():
         if line.startswith("tree "):
-            return line.split()[1]
+            tree_hash = line.split()[1]
+        elif line.startswith("parent ") and parent_hash == "":
+            parent_hash = line.split()[1]
+    return tree_hash, parent_hash
 
 
 def print_tree(repo, tree_hash):
@@ -40,14 +45,20 @@ def print_tree(repo, tree_hash):
         print(mode, obj_hash, name)
         i = zero + 21
         
+
+def print_history(repo, branch):
+    commit_hash = get_branch_commit(repo, branch)
+    while commit_hash != "":
+        tree_hash, parent_hash = parse_commit(repo, commit_hash)
+        print("TREE for commit", commit_hash)
+        print_tree(repo, tree_hash)
+        commit_hash = parent_hash
         
+
 repo = sys.argv[1]
 if len(sys.argv) == 2:
     list_branches(repo)
 else:
     branch = sys.argv[2]
-    commit_hash = get_branch_commit(repo, branch)
-    tree_hash = get_tree_hash(repo, commit_hash)
-    print_tree(repo, tree_hash)
-
+    print_history(repo, branch)
 
