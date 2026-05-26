@@ -11,7 +11,7 @@ monsters = {}
 def encounter(x, y):
     if (x, y) in monsters:
         name, hello = monsters[(x, y)]
-        print(cowsay(hello), end="")
+        print(cowsay(hello, cow=name), end="")
 
 
 def move(dx, dy):
