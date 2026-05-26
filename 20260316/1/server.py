@@ -80,13 +80,15 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
     server.bind((HOST, PORT))
     server.listen(1)
     print("Server started")
-    conn, addr = server.accept()
-    with conn:
-        while True:
-            data = conn.recv(4096)
-            if not data:
-                break
-            request = data.decode().strip()
-            response = handle_command(request)
-            conn.sendall((response + "\n").encode())
+    while True:
+        conn, addr = server.accept()
+        with conn:
+            while True:
+                data = conn.recv(4096)
+                if not data:
+                    break
+                request = data.decode().strip()
+                response = handle_command(request)
+                conn.sendall((response + "\n").encode())
+
 
