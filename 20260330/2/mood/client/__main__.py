@@ -116,7 +116,7 @@ class MudClient(cmd.Cmd):
             self.send_command(f"sayall {shlex.quote(args[0])}")
         else:
             print("Invalid arguments")
-            
+
     def do_attack(self, arg):
         args = shlex.split(arg)
         if len(args) == 1:
