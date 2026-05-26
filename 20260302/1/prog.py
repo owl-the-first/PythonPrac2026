@@ -1,3 +1,4 @@
+import shlex
 from io import StringIO
 from cowsay import cowsay, list_cows, read_dot_cow
 
@@ -25,7 +26,7 @@ def is_known_monster(name):
 
 def encounter(x, y):
     if (x, y) in monsters:
-        name, hello = monsters[(x, y)]
+        name, hello, hp = monsters[(x, y)]
         if name == "abcdefgh":
             print(cowsay(hello, cowfile=ABCDEFGH_COW), end="")
         else:
@@ -42,21 +43,22 @@ def move(dx, dy):
 
 def addmon(args):
     name = args[0]
-    x = int(args[1])
-    y = int(args[2])
-    hello = args[3]
+    hello = args[2]
+    hp = int(args[4])
+    x = int(args[6])
+    y = int(args[7])
     if not is_known_monster(name):
         print("Cannot add unknown monster")
         return
     replaced = (x, y) in monsters
-    monsters[(x, y)] = (name, hello)
+    monsters[(x, y)] = (name, hello, hp)
     print(f"Added monster {name} to ({x}, {y}) saying {hello}")
     if replaced:
         print("Replaced the old monster")
 
 
 def handle_command(line):
-    parts = line.split()
+    parts = shlex.split(line)
     if len(parts) == 0:
         return
     command = parts[0]
@@ -69,7 +71,13 @@ def handle_command(line):
         move(-1, 0)
     elif command == "right" and len(args) == 0:
         move(1, 0)
-    elif command == "addmon" and len(args) == 4:
+    elif (
+        command == "addmon"
+        and len(args) == 8
+        and args[1] == "hello"
+        and args[3] == "hp"
+        and args[5] == "coords"
+    ):
         try:
             addmon(args)
         except ValueError:
@@ -81,9 +89,11 @@ def handle_command(line):
 
 
 print("<<< Welcome to Python-MUD 0.1 >>>")
+
 while True:
     try:
         line = input()
         handle_command(line)
     except EOFError:
         break
+
