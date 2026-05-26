@@ -1,17 +1,35 @@
-from cowsay import cowsay, list_cows
-
+from io import StringIO
+from cowsay import cowsay, list_cows, read_dot_cow
 
 FIELD_SIZE = 10
-
 player_x = 0
 player_y = 0
 monsters = {}
+ABCDEFGH_COW = read_dot_cow(StringIO(r"""
+$the_cow = <<EOC;
+        $thoughts
+         $thoughts
+          /\_/\\
+         ( o.o )
+          > ^ <
+        /       \\
+       /  |   |  \\
+      (_(_|___|_)_)
+EOC
+"""))
+
+
+def is_known_monster(name):
+    return name in list_cows() or name == "abcdefgh"
 
 
 def encounter(x, y):
     if (x, y) in monsters:
         name, hello = monsters[(x, y)]
-        print(cowsay(hello, cow=name), end="")
+        if name == "abcdefgh":
+            print(cowsay(hello, cowfile=ABCDEFGH_COW), end="")
+        else:
+            print(cowsay(hello, cow=name), end="")
 
 
 def move(dx, dy):
@@ -27,7 +45,7 @@ def addmon(args):
     x = int(args[1])
     y = int(args[2])
     hello = args[3]
-    if name not in list_cows():
+    if not is_known_monster(name):
         print("Cannot add unknown monster")
         return
     replaced = (x, y) in monsters
