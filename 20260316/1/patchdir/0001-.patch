@@ -1,0 +1,432 @@
+From ff96238b0fcb2523c4c6e25b0b3a011a6649fe46 Mon Sep 17 00:00:00 2001
+From: Denis Kulpin <kulpin_denis@mail.ru>
+Date: Wed, 27 May 2026 01:42:27 +0300
+Subject: [PATCH 1/2] =?UTF-8?q?=D0=A0=D0=B0=D0=B7=D0=B4=D0=B5=D0=BB=D0=B5?=
+ =?UTF-8?q?=D0=BD=D0=B0=20=D0=B8=D0=B3=D1=80=D0=B0=20=D0=BD=D0=B0=20=D0=BA?=
+ =?UTF-8?q?=D0=BB=D0=B8=D0=B5=D0=BD=D1=82=20=D0=B8=20=D1=81=D0=B5=D1=80?=
+ =?UTF-8?q?=D0=B2=D0=B5=D1=80?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ 20260316/1/client.py | 129 ++++++++++++++++++++++++++++++++
+ 20260316/1/prog.py   | 170 -------------------------------------------
+ 20260316/1/server.py |  92 +++++++++++++++++++++++
+ 3 files changed, 221 insertions(+), 170 deletions(-)
+ create mode 100644 20260316/1/client.py
+ delete mode 100644 20260316/1/prog.py
+ create mode 100644 20260316/1/server.py
+
+diff --git a/20260316/1/client.py b/20260316/1/client.py
+new file mode 100644
+index 0000000..3b5fc18
+--- /dev/null
++++ b/20260316/1/client.py
+@@ -0,0 +1,129 @@
++import cmd
++import shlex
++import socket
++from io import StringIO
++from cowsay import cowsay, list_cows, read_dot_cow
++
++HOST = "localhost"
++PORT = 1337
++WEAPONS = {
++    "sword": 10,
++    "spear": 15,
++    "axe": 20,
++}
++ABCDEFGH_COW = read_dot_cow(StringIO(r"""
++$the_cow = <<EOC;
++        $thoughts
++         $thoughts
++          /\_/\\
++         ( o.o )
++          > ^ <
++        /       \\
++       /  |   |  \\
++      (_(_|___|_)_)
++EOC
++"""))
++
++
++def is_known_monster(name):
++    return name in list_cows() or name == "abcdefgh"
++
++
++def show_monster(name, hello):
++    if name == "abcdefgh":
++        print(cowsay(hello, cowfile=ABCDEFGH_COW), end="")
++    else:
++        print(cowsay(hello, cow=name), end="")
++
++
++def send_command(sock, command):
++    sock.sendall((command + "\n").encode())
++    return sock.recv(4096).decode().strip()
++
++
++def print_response(response):
++    for line in response.splitlines():
++        if line.startswith("MONSTER "):
++            parts = line.split(maxsplit=2)
++            show_monster(parts[1], parts[2])
++        else:
++            print(line)
++
++
++class MudClient(cmd.Cmd):
++    prompt = ""
++
++    def __init__(self, sock):
++        super().__init__()
++        self.sock = sock
++
++    def do_up(self, arg):
++        if arg:
++            print("Invalid arguments")
++        else:
++            print_response(send_command(self.sock, "move 0 -1"))
++
++    def do_down(self, arg):
++        if arg:
++            print("Invalid arguments")
++        else:
++            print_response(send_command(self.sock, "move 0 1"))
++
++    def do_left(self, arg):
++        if arg:
++            print("Invalid arguments")
++        else:
++            print_response(send_command(self.sock, "move -1 0"))
++
++    def do_right(self, arg):
++        if arg:
++            print("Invalid arguments")
++        else:
++            print_response(send_command(self.sock, "move 1 0"))
++
++    def do_addmon(self, arg):
++        args = shlex.split(arg)
++        if (
++            len(args) == 8
++            and args[1] == "hello"
++            and args[3] == "hp"
++            and args[5] == "coords"
++        ):
++            name = args[0]
++            hello = args[2]
++            hp = args[4]
++            x = args[6]
++            y = args[7]
++            if not is_known_monster(name):
++                print("Cannot add unknown monster")
++                return
++            request = f"addmon {shlex.quote(name)} {shlex.quote(hello)} {hp} {x} {y}"
++            print_response(send_command(self.sock, request))
++        else:
++            print("Invalid arguments")
++
++    def do_attack(self, arg):
++        args = shlex.split(arg)
++        if len(args) == 1:
++            request = f"attack {args[0]} sword {WEAPONS['sword']}"
++            print_response(send_command(self.sock, request))
++        elif len(args) == 3 and args[1] == "with" and args[2] in WEAPONS:
++            request = f"attack {args[0]} {args[2]} {WEAPONS[args[2]]}"
++            print_response(send_command(self.sock, request))
++        elif len(args) == 3 and args[1] == "with":
++            print("Unknown weapon")
++        else:
++            print("Invalid arguments")
++
++    def do_EOF(self, arg):
++        return True
++
++    def default(self, line):
++        print("Invalid command")
++
++
++print("<<< Welcome to Python-MUD 0.1 >>>")
++with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
++    sock.connect((HOST, PORT))
++    MudClient(sock).cmdloop()
++
+diff --git a/20260316/1/prog.py b/20260316/1/prog.py
+deleted file mode 100644
+index e7d0009..0000000
+--- a/20260316/1/prog.py
++++ /dev/null
+@@ -1,170 +0,0 @@
+-import cmd
+-import shlex
+-from io import StringIO
+-from cowsay import cowsay, list_cows, read_dot_cow
+-
+-FIELD_SIZE = 10
+-WEAPONS = {
+-    "sword": 10,
+-    "spear": 15,
+-    "axe": 20,
+-}
+-player_x = 0
+-player_y = 0
+-monsters = {}
+-ABCDEFGH_COW = read_dot_cow(StringIO(r"""
+-$the_cow = <<EOC;
+-        $thoughts
+-         $thoughts
+-          /\_/\\
+-         ( o.o )
+-          > ^ <
+-        /       \\
+-       /  |   |  \\
+-      (_(_|___|_)_)
+-EOC
+-"""))
+-
+-
+-def is_known_monster(name):
+-    return name in list_cows() or name == "abcdefgh"
+-
+-
+-def show_monster(name, hello):
+-    if name == "abcdefgh":
+-        print(cowsay(hello, cowfile=ABCDEFGH_COW), end="")
+-    else:
+-        print(cowsay(hello, cow=name), end="")
+-
+-
+-def encounter(x, y):
+-    if (x, y) in monsters:
+-        name, hello, hp = monsters[(x, y)]
+-        show_monster(name, hello)
+-
+-
+-def move(dx, dy):
+-    global player_x, player_y
+-    player_x = (player_x + dx) % FIELD_SIZE
+-    player_y = (player_y + dy) % FIELD_SIZE
+-    print(f"Moved to ({player_x}, {player_y})")
+-    encounter(player_x, player_y)
+-
+-
+-def addmon(args):
+-    name = args[0]
+-    hello = args[2]
+-    hp = int(args[4])
+-    x = int(args[6])
+-    y = int(args[7])
+-    if not is_known_monster(name):
+-        print("Cannot add unknown monster")
+-        return
+-    replaced = (x, y) in monsters
+-    monsters[(x, y)] = (name, hello, hp)
+-    print(f"Added monster {name} to ({x}, {y}) saying {hello}")
+-    if replaced:
+-        print("Replaced the old monster")
+-
+-
+-def find_monster_by_name(monster_name):
+-    for coords, monster in monsters.items():
+-        name, hello, hp = monster
+-        if name == monster_name:
+-            return coords
+-    return None
+-
+-
+-def attack_monster(monster_name, weapon):
+-    coords = find_monster_by_name(monster_name)
+-    if coords is None:
+-        print(f"No {monster_name} here")
+-        return
+-    name, hello, hp = monsters[coords]
+-    damage = WEAPONS[weapon]
+-    real_damage = min(damage, hp)
+-    hp -= real_damage
+-    print(f"Attacked {name} with {weapon}, damage {real_damage} hp")
+-    if hp == 0:
+-        print(f"{name} died")
+-        del monsters[coords]
+-    else:
+-        monsters[coords] = (name, hello, hp)
+-        print(f"{name} now has {hp}")
+-
+-
+-class MudShell(cmd.Cmd):
+-    prompt = ""
+-
+-    def do_up(self, arg):
+-        if arg:
+-            print("Invalid arguments")
+-        else:
+-            move(0, -1)
+-
+-    def do_down(self, arg):
+-        if arg:
+-            print("Invalid arguments")
+-        else:
+-            move(0, 1)
+-
+-    def do_left(self, arg):
+-        if arg:
+-            print("Invalid arguments")
+-        else:
+-            move(-1, 0)
+-
+-    def do_right(self, arg):
+-        if arg:
+-            print("Invalid arguments")
+-        else:
+-            move(1, 0)
+-
+-    def do_addmon(self, arg):
+-        args = shlex.split(arg)
+-        if (
+-            len(args) == 8
+-            and args[1] == "hello"
+-            and args[3] == "hp"
+-            and args[5] == "coords"
+-        ):
+-            try:
+-                addmon(args)
+-            except ValueError:
+-                print("Invalid arguments")
+-        else:
+-            print("Invalid arguments")
+-
+-    def do_attack(self, arg):
+-        args = shlex.split(arg)
+-        if len(args) == 1:
+-            attack_monster(args[0], "sword")
+-        elif len(args) == 3 and args[1] == "with" and args[2] in WEAPONS:
+-            attack_monster(args[0], args[2])
+-        elif len(args) == 3 and args[1] == "with":
+-            print("Unknown weapon")
+-        else:
+-            print("Invalid arguments")
+-
+-    def complete_attack(self, text, line, begidx, endidx):
+-        words = shlex.split(line[:begidx])
+-        if words == ["attack"]:
+-            variants = [monster[0] for monster in monsters.values()]
+-        elif len(words) == 2:
+-            variants = ["with"]
+-        elif len(words) == 3 and words[2] == "with":
+-            variants = list(WEAPONS)
+-        else:
+-            variants = []
+-        return [variant for variant in variants if variant.startswith(text)]
+-
+-    def do_EOF(self, arg):
+-        return True
+-
+-    def default(self, line):
+-        print("Invalid command")
+-
+-
+-print("<<< Welcome to Python-MUD 0.1 >>>")
+-MudShell().cmdloop()
+-
+diff --git a/20260316/1/server.py b/20260316/1/server.py
+new file mode 100644
+index 0000000..f56b2fe
+--- /dev/null
++++ b/20260316/1/server.py
+@@ -0,0 +1,92 @@
++import shlex
++import socket
++
++HOST = "localhost"
++PORT = 1337
++FIELD_SIZE = 10
++player_x = 0
++player_y = 0
++monsters = {}
++
++
++def move(dx, dy):
++    global player_x, player_y
++    player_x = (player_x + dx) % FIELD_SIZE
++    player_y = (player_y + dy) % FIELD_SIZE
++    answer = [f"Moved to ({player_x}, {player_y})"]
++    if (player_x, player_y) in monsters:
++        name, hello, hp = monsters[(player_x, player_y)]
++        answer.append(f"MONSTER {name} {hello}")
++    return "\n".join(answer)
++
++
++def addmon(args):
++    name = args[0]
++    hello = args[1]
++    hp = int(args[2])
++    x = int(args[3])
++    y = int(args[4])
++    replaced = (x, y) in monsters
++    monsters[(x, y)] = (name, hello, hp)
++    answer = [f"Added monster {name} to ({x}, {y}) saying {hello}"]
++    if replaced:
++        answer.append("Replaced the old monster")
++    return "\n".join(answer)
++
++
++def find_monster_by_name(monster_name):
++    for coords, monster in monsters.items():
++        name, hello, hp = monster
++        if name == monster_name:
++            return coords
++    return None
++
++
++def attack(args):
++    monster_name = args[0]
++    weapon = args[1]
++    damage = int(args[2])
++    coords = find_monster_by_name(monster_name)
++    if coords is None:
++        return f"No {monster_name} here"
++    name, hello, hp = monsters[coords]
++    real_damage = min(damage, hp)
++    hp -= real_damage
++    answer = [f"Attacked {name} with {weapon}, damage {real_damage} hp"]
++    if hp == 0:
++        answer.append(f"{name} died")
++        del monsters[coords]
++    else:
++        monsters[coords] = (name, hello, hp)
++        answer.append(f"{name} now has {hp}")
++    return "\n".join(answer)
++
++
++def handle_command(line):
++    parts = shlex.split(line)
++    command = parts[0]
++    args = parts[1:]
++    if command == "move":
++        return move(int(args[0]), int(args[1]))
++    if command == "addmon":
++        return addmon(args)
++    if command == "attack":
++        return attack(args)
++    return "Invalid command"
++
++
++with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
++    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
++    server.bind((HOST, PORT))
++    server.listen(1)
++    print("Server started")
++    conn, addr = server.accept()
++    with conn:
++        while True:
++            data = conn.recv(4096)
++            if not data:
++                break
++            request = data.decode().strip()
++            response = handle_command(request)
++            conn.sendall((response + "\n").encode())
++
+-- 
+2.51.0
+
