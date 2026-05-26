@@ -146,4 +146,3 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
     receiver.daemon = True
     receiver.start()
     MudClient(sock).cmdloop()
-
