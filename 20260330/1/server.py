@@ -15,9 +15,10 @@ def send(conn, message):
     conn.sendall((message + "\n").encode())
 
 
-def broadcast(message):
-    for conn in list(clients.values()):
-        send(conn, message)
+def broadcast(message, exclude=None):
+    for username, conn in list(clients.items()):
+        if username != exclude:
+            send(conn, message)
 
 
 def move(username, dx, dy):
@@ -88,6 +89,10 @@ def handle_command(username, line):
         answer = attack(args)
         broadcast(f"{username}: {answer}")
         return answer
+    if command == "sayall":
+        message = args[0]
+        broadcast(f"{username}: {message}", exclude=username)
+        return f"{username}: {message}"
     return "Invalid command"
 
 
@@ -110,7 +115,8 @@ def client_processing(conn, addr):
             request = data.decode().strip()
             with lock:
                 response = handle_command(username, request)
-            send(conn, response)
+            if response:
+                send(conn, response)
     finally:
         with lock:
             if username in clients:
