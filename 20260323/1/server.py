@@ -1,21 +1,33 @@
 import shlex
 import socket
+import threading
 
 HOST = "localhost"
 PORT = 1337
 FIELD_SIZE = 10
-player_x = 0
-player_y = 0
+players = {}
+clients = {}
 monsters = {}
+lock = threading.Lock()
 
 
-def move(dx, dy):
-    global player_x, player_y
-    player_x = (player_x + dx) % FIELD_SIZE
-    player_y = (player_y + dy) % FIELD_SIZE
-    answer = [f"Moved to ({player_x}, {player_y})"]
-    if (player_x, player_y) in monsters:
-        name, hello, hp = monsters[(player_x, player_y)]
+def send(conn, message):
+    conn.sendall((message + "\n").encode())
+
+
+def broadcast(message):
+    for conn in list(clients.values()):
+        send(conn, message)
+
+
+def move(username, dx, dy):
+    x, y = players[username]
+    x = (x + dx) % FIELD_SIZE
+    y = (y + dy) % FIELD_SIZE
+    players[username] = (x, y)
+    answer = [f"Moved to ({x}, {y})"]
+    if (x, y) in monsters:
+        name, hello, hp = monsters[(x, y)]
         answer.append(f"MONSTER {name} {hello}")
     return "\n".join(answer)
 
@@ -62,33 +74,61 @@ def attack(args):
     return "\n".join(answer)
 
 
-def handle_command(line):
+def handle_command(username, line):
     parts = shlex.split(line)
     command = parts[0]
     args = parts[1:]
     if command == "move":
-        return move(int(args[0]), int(args[1]))
+        return move(username, int(args[0]), int(args[1]))
     if command == "addmon":
-        return addmon(args)
+        answer = addmon(args)
+        broadcast(f"{username}: {answer}")
+        return answer
     if command == "attack":
-        return attack(args)
+        answer = attack(args)
+        broadcast(f"{username}: {answer}")
+        return answer
     return "Invalid command"
+
+
+def client_processing(conn, addr):
+    username = conn.recv(4096).decode().strip()
+    with lock:
+        if username in clients:
+            send(conn, "Username is already taken")
+            conn.close()
+            return
+        clients[username] = conn
+        players[username] = (0, 0)
+        send(conn, f"Welcome, {username}")
+        broadcast(f"{username} joined the game")
+    try:
+        while True:
+            data = conn.recv(4096)
+            if not data:
+                break
+            request = data.decode().strip()
+            with lock:
+                response = handle_command(username, request)
+            send(conn, response)
+    finally:
+        with lock:
+            if username in clients:
+                del clients[username]
+            if username in players:
+                del players[username]
+            broadcast(f"{username} left the game")
+        conn.close()
 
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((HOST, PORT))
-    server.listen(1)
+    server.listen()
     print("Server started")
     while True:
         conn, addr = server.accept()
-        with conn:
-            while True:
-                data = conn.recv(4096)
-                if not data:
-                    break
-                request = data.decode().strip()
-                response = handle_command(request)
-                conn.sendall((response + "\n").encode())
-
+        thread = threading.Thread(target=client_processing, args=(conn, addr))
+        thread.daemon = True
+        thread.start()
 
