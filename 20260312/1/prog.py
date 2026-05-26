@@ -63,19 +63,28 @@ def addmon(args):
         print("Replaced the old monster")
 
 
-def attack_current_monster(damage):
-    if (player_x, player_y) not in monsters:
-        print("No monster here")
+def find_monster_by_name(monster_name):
+    for coords, monster in monsters.items():
+        name, hello, hp = monster
+        if name == monster_name:
+            return coords
+    return None
+
+
+def attack_monster(monster_name, damage):
+    coords = find_monster_by_name(monster_name)
+    if coords is None:
+        print(f"No {monster_name} here")
         return
-    name, hello, hp = monsters[(player_x, player_y)]
+    name, hello, hp = monsters[coords]
     real_damage = min(damage, hp)
     hp -= real_damage
     print(f"Attacked {name}, damage {real_damage} hp")
     if hp == 0:
         print(f"{name} died")
-        del monsters[(player_x, player_y)]
+        del monsters[coords]
     else:
-        monsters[(player_x, player_y)] = (name, hello, hp)
+        monsters[coords] = (name, hello, hp)
         print(f"{name} now has {hp}")
 
 
@@ -122,10 +131,19 @@ class MudShell(cmd.Cmd):
             print("Invalid arguments")
 
     def do_attack(self, arg):
-        if arg:
-            print("Invalid arguments")
+        args = shlex.split(arg)
+        if len(args) == 1:
+            attack_monster(args[0], 10)
         else:
-            attack_current_monster(10)
+            print("Invalid arguments")
+            
+    def complete_attack(self, text, line, begidx, endidx):
+        words = shlex.split(line[:begidx])
+        if words == ["attack"]:
+            variants = [monster[0] for monster in monsters.values()]
+        else:
+            variants = []
+        return [variant for variant in variants if variant.startswith(text)]
 
     def do_EOF(self, arg):
         return True
