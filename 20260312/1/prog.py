@@ -4,7 +4,11 @@ from io import StringIO
 from cowsay import cowsay, list_cows, read_dot_cow
 
 FIELD_SIZE = 10
-WEAPONS = {"sword": 10}
+WEAPONS = {
+    "sword": 10,
+    "spear": 15,
+    "axe": 20,
+}
 player_x = 0
 player_y = 0
 monsters = {}
@@ -122,10 +126,25 @@ class MudShell(cmd.Cmd):
             print("Invalid arguments")
 
     def do_attack(self, arg):
-        if arg:
-            print("Invalid arguments")
+        args = shlex.split(arg)
+        if len(args) == 0:
+            attack_current_monster(WEAPONS["sword"])
+        elif len(args) == 2 and args[0] == "with" and args[1] in WEAPONS:
+            attack_current_monster(WEAPONS[args[1]])
+        elif len(args) == 2 and args[0] == "with":
+            print("Unknown weapon")
         else:
-            attack_current_monster(10)
+            print("Invalid arguments")
+            
+    def complete_attack(self, text, line, begidx, endidx):
+        words = shlex.split(line[:begidx])
+        if words == ["attack"]:
+            variants = ["with"]
+        elif words == ["attack", "with"]:
+            variants = list(WEAPONS)
+        else:
+            variants = []
+        return [variant for variant in variants if variant.startswith(text)]
 
     def do_EOF(self, arg):
         return True
