@@ -67,19 +67,29 @@ def addmon(args):
         print("Replaced the old monster")
 
 
-def attack_current_monster(damage):
-    if (player_x, player_y) not in monsters:
-        print("No monster here")
+def find_monster_by_name(monster_name):
+    for coords, monster in monsters.items():
+        name, hello, hp = monster
+        if name == monster_name:
+            return coords
+    return None
+
+
+def attack_monster(monster_name, weapon):
+    coords = find_monster_by_name(monster_name)
+    if coords is None:
+        print(f"No {monster_name} here")
         return
-    name, hello, hp = monsters[(player_x, player_y)]
+    name, hello, hp = monsters[coords]
+    damage = WEAPONS[weapon]
     real_damage = min(damage, hp)
     hp -= real_damage
-    print(f"Attacked {name}, damage {real_damage} hp")
+    print(f"Attacked {name} with {weapon}, damage {real_damage} hp")
     if hp == 0:
         print(f"{name} died")
-        del monsters[(player_x, player_y)]
+        del monsters[coords]
     else:
-        monsters[(player_x, player_y)] = (name, hello, hp)
+        monsters[coords] = (name, hello, hp)
         print(f"{name} now has {hp}")
 
 
@@ -127,20 +137,22 @@ class MudShell(cmd.Cmd):
 
     def do_attack(self, arg):
         args = shlex.split(arg)
-        if len(args) == 0:
-            attack_current_monster(WEAPONS["sword"])
-        elif len(args) == 2 and args[0] == "with" and args[1] in WEAPONS:
-            attack_current_monster(WEAPONS[args[1]])
-        elif len(args) == 2 and args[0] == "with":
+        if len(args) == 1:
+            attack_monster(args[0], "sword")
+        elif len(args) == 3 and args[1] == "with" and args[2] in WEAPONS:
+            attack_monster(args[0], args[2])
+        elif len(args) == 3 and args[1] == "with":
             print("Unknown weapon")
         else:
             print("Invalid arguments")
-            
+
     def complete_attack(self, text, line, begidx, endidx):
         words = shlex.split(line[:begidx])
         if words == ["attack"]:
+            variants = [monster[0] for monster in monsters.values()]
+        elif len(words) == 2:
             variants = ["with"]
-        elif words == ["attack", "with"]:
+        elif len(words) == 3 and words[2] == "with":
             variants = list(WEAPONS)
         else:
             variants = []
@@ -155,3 +167,4 @@ class MudShell(cmd.Cmd):
 
 print("<<< Welcome to Python-MUD 0.1 >>>")
 MudShell().cmdloop()
+
