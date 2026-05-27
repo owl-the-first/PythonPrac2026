@@ -214,3 +214,8 @@ __marimo__/
 20260420/2/doc/_build/
 20260427/1/doc/_build/
 20260427/1/.doit.db
+20260504/1/doc/_build/
+20260504/1/dist/
+20260504/1/build/
+20260504/1/*.egg-info/
+20260504/1/.doit.db
