@@ -11,6 +11,7 @@ MONSTER_MOVE_DELAY = 30
 players = {}
 clients = {}
 monsters = {}
+locales = {}
 monsters_can_move = True
 lock = threading.Lock()
 
@@ -92,6 +93,13 @@ def movemonsters(args):
     return f"Moving monsters: {args[0]}"
     
 
+def set_locale(username, args):
+    if len(args) != 1:
+        return "Invalid arguments"
+    locales[username] = args[0]
+    return f"Set up locale: {args[0]}"
+    
+    
 def handle_command(username, line):
     parts = shlex.split(line)
     command = parts[0]
@@ -110,6 +118,8 @@ def handle_command(username, line):
         return sayall(username, args)
     if command == "movemonsters":
         return movemonsters(args)
+    if command == "locale":
+        return set_locale(username, args)
     return "Invalid command"
 
 
@@ -184,6 +194,8 @@ def client_processing(conn, addr):
                 del clients[username]
             if username in players:
                 del players[username]
+            if username in locales:
+                del locales[username]
             broadcast(f"{username} left the game")
         conn.close()
 

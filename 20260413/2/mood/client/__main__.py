@@ -118,6 +118,13 @@ class MudClient(cmd.Cmd):
         else:
             print("Invalid arguments")
             
+    def do_locale(self, arg):
+        args = shlex.split(arg)
+        if len(args) == 1:
+            self.send_command(f"locale {args[0]}")
+        else:
+            print("Invalid arguments")
+            
     def do_movemonsters(self, arg):
         args = shlex.split(arg)
         if len(args) == 1 and args[0] in ("on", "off"):
