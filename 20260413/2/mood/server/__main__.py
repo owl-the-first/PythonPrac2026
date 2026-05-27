@@ -26,6 +26,29 @@ def send(conn, message):
     conn.sendall((message + "\n").encode())
 
 
+def send_event(recipient, message, **kwargs):
+    text = _(recipient, message).format(**kwargs)
+    send(clients[recipient], text)
+
+
+def send_hp_event(recipient, singular, plural, number, **kwargs):
+    text = ngettext(recipient, singular, plural, number).format(
+        count=number,
+        **kwargs,
+    )
+    send(clients[recipient], text)
+
+
+def broadcast_event(message, **kwargs):
+    for username in list(clients):
+        send_event(username, message, **kwargs)
+
+
+def broadcast_hp_event(singular, plural, number, **kwargs):
+    for username in list(clients):
+        send_hp_event(username, singular, plural, number, **kwargs)
+
+
 def broadcast(message):
     for conn in list(clients.values()):
         send(conn, message)
@@ -51,10 +74,7 @@ def addmon(args):
     y = int(args[4])
     replaced = (x, y) in monsters
     monsters[(x, y)] = (name, hello, hp)
-    answer = [f"Added monster {name} to ({x}, {y}) saying {hello}"]
-    if replaced:
-        answer.append("Replaced the old monster")
-    return "\n".join(answer)
+    return name, hello, hp, x, y, replaced
 
 
 def find_monster_by_name(monster_name):
@@ -71,18 +91,15 @@ def attack(args):
     damage = int(args[2])
     coords = find_monster_by_name(monster_name)
     if coords is None:
-        return f"No {monster_name} here"
+        return None
     name, hello, hp = monsters[coords]
     real_damage = min(damage, hp)
     hp -= real_damage
-    answer = [f"Attacked {name} with {weapon}, damage {real_damage} hp"]
     if hp == 0:
-        answer.append(f"{name} died")
         del monsters[coords]
     else:
         monsters[coords] = (name, hello, hp)
-        answer.append(f"{name} now has {hp}")
-    return "\n".join(answer)
+    return name, weapon, real_damage, hp
 
 
 def sayall(username, args):
@@ -99,23 +116,42 @@ def movemonsters(args):
     return f"Moving monsters: {args[0]}"
 
 
-def get_translator(username):
+def get_translation(username):
     locale_name = locales.get(username, DEFAULT_LOCALE)
-    translation = gettext.translation(
+    return gettext.translation(
         TEXT_DOMAIN,
         localedir=LOCALE_DIR,
         languages=[locale_name],
         fallback=True,
     )
-    return translation.gettext
+
+
+def _(username, message):
+    return get_translation(username).gettext(message)
+
+
+def ngettext(username, singular, plural, number):
+    return get_translation(username).ngettext(singular, plural, number)
+
+
+def hp_text(username, number):
+    return ngettext(
+        username,
+        "{count} health point",
+        "{count} health points",
+        number,
+    ).format(count=number)
 
 
 def set_locale(username, args):
     if len(args) != 1:
         return "Invalid arguments"
     locales[username] = args[0]
-    translate = get_translator(username)
-    return translate("Set up locale: {locale}").format(locale=args[0])
+    return _(username, "Set up locale: {locale}").format(locale=args[0])
+
+
+def translate_for(username, message, **kwargs):
+    return _(username, message).format(**kwargs)
 
 
 def handle_command(username, line):
@@ -125,13 +161,42 @@ def handle_command(username, line):
     if command == "move":
         return move(username, int(args[0]), int(args[1]))
     if command == "addmon":
-        answer = addmon(args)
-        broadcast(f"{username}: {answer}")
-        return answer
+        name, hello, hp, x, y, replaced = addmon(args)
+        broadcast_hp_event(
+            "{username} added monster {name} to ({x}, {y}) with {count} hp",
+            "{username} added monster {name} to ({x}, {y}) with {count} hp",
+            hp,
+            username=username,
+            name=name,
+            x=x,
+            y=y,
+        )
+        if replaced:
+            broadcast_event("Replaced the old monster")
+        return ""
     if command == "attack":
-        answer = attack(args)
-        broadcast(f"{username}: {answer}")
-        return answer
+        result = attack(args)
+        if result is None:
+            return translate_for(username, "No {name} here", name=args[0])
+        name, weapon, damage, hp = result
+        broadcast_hp_event(
+            "{username} attacked {name} with {weapon}, damage {count} hp",
+            "{username} attacked {name} with {weapon}, damage {count} hp",
+            damage,
+            username=username,
+            name=name,
+            weapon=weapon,
+        )
+        if hp == 0:
+            broadcast_event("{name} died", name=name)
+        else:
+            broadcast_hp_event(
+                "{name} now has {count} hp",
+                "{name} now has {count} hp",
+                hp,
+                name=name,
+            )
+        return ""
     if command == "sayall":
         return sayall(username, args)
     if command == "movemonsters":
@@ -172,7 +237,11 @@ def move_random_monster():
         return
     del monsters[old_coords]
     monsters[new_coords] = (name, hello, hp)
-    broadcast(f"{name} moved one cell {direction}")
+    broadcast_event(
+        "{name} moved one cell {direction}",
+        name=name,
+        direction=direction,
+    )
     for conn in players_at(new_x, new_y):
         send(conn, f"MONSTER {name} {hello}")
 
@@ -195,7 +264,7 @@ def client_processing(conn, addr):
         clients[username] = conn
         players[username] = (0, 0)
         send(conn, f"Welcome, {username}")
-        broadcast(f"{username} joined the game")
+        broadcast_event("{username} joined the game", username=username)
     try:
         while True:
             data = conn.recv(4096)
@@ -214,7 +283,7 @@ def client_processing(conn, addr):
                 del players[username]
             if username in locales:
                 del locales[username]
-            broadcast(f"{username} left the game")
+            broadcast_event("{username} left the game", username=username)
         conn.close()
 
 

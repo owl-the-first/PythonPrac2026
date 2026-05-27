@@ -7,3 +7,40 @@ msgstr ""
 
 msgid "Set up locale: {locale}"
 msgstr "Установлена локаль: {locale}"
+
+msgid "{username} joined the game"
+msgstr "{username} вошёл в игру"
+
+msgid "{username} left the game"
+msgstr "{username} вышел из игры"
+
+msgid "Replaced the old monster"
+msgstr "Старый монстр заменён"
+
+msgid "No {name} here"
+msgstr "{name} здесь нет"
+
+msgid "{name} died"
+msgstr "{name} умер"
+
+msgid "{name} moved one cell {direction}"
+msgstr "{name} переместился на одну клетку {direction}"
+
+msgid "{username} added monster {name} to ({x}, {y}) with {count} hp"
+msgid_plural "{username} added monster {name} to ({x}, {y}) with {count} hp"
+msgstr[0] "{username} добавил монстра {name} в ({x}, {y}) с {count} очком здоровья"
+msgstr[1] "{username} добавил монстра {name} в ({x}, {y}) с {count} очками здоровья"
+msgstr[2] "{username} добавил монстра {name} в ({x}, {y}) с {count} очками здоровья"
+
+msgid "{username} attacked {name} with {weapon}, damage {count} hp"
+msgid_plural "{username} attacked {name} with {weapon}, damage {count} hp"
+msgstr[0] "{username} атаковал {name} оружием {weapon}, снято {count} очко здоровья"
+msgstr[1] "{username} атаковал {name} оружием {weapon}, снято {count} очка здоровья"
+msgstr[2] "{username} атаковал {name} оружием {weapon}, снято {count} очков здоровья"
+
+msgid "{name} now has {count} hp"
+msgid_plural "{name} now has {count} hp"
+msgstr[0] "У {name} осталось {count} очко здоровья"
+msgstr[1] "У {name} осталось {count} очка здоровья"
+msgstr[2] "У {name} осталось {count} очков здоровья"
+
