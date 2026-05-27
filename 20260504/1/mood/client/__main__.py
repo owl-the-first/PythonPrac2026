@@ -6,6 +6,8 @@ import threading
 from io import StringIO
 from cowsay import cowsay, list_cows, read_dot_cow
 import time
+import webbrowser
+from pathlib import Path
 
 HOST = "localhost"
 PORT = 1337
@@ -131,6 +133,15 @@ class MudClient(cmd.Cmd):
             self.send_command(f"movemonsters {args[0]}")
         else:
             print("Invalid arguments")
+    
+    
+    def do_documentation(self, arg):
+        if arg:
+            print("Invalid arguments")
+            return
+        doc_path = Path(__file__).parents[2] / "doc_html" / "index.html"
+        webbrowser.open(doc_path.resolve().as_uri())
+        
 
     def do_attack(self, arg):
         args = shlex.split(arg)
