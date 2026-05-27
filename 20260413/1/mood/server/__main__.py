@@ -11,6 +11,7 @@ MONSTER_MOVE_DELAY = 30
 players = {}
 clients = {}
 monsters = {}
+monsters_can_move = True
 lock = threading.Lock()
 
 
@@ -83,6 +84,14 @@ def sayall(username, args):
     return ""
 
 
+def movemonsters(args):
+    global monsters_can_move
+    if len(args) != 1 or args[0] not in ("on", "off"):
+        return "Invalid arguments"
+    monsters_can_move = args[0] == "on"
+    return f"Moving monsters: {args[0]}"
+    
+
 def handle_command(username, line):
     parts = shlex.split(line)
     command = parts[0]
@@ -99,6 +108,8 @@ def handle_command(username, line):
         return answer
     if command == "sayall":
         return sayall(username, args)
+    if command == "movemonsters":
+        return movemonsters(args)
     return "Invalid command"
 
 
@@ -142,7 +153,8 @@ def move_monsters_periodically():
     while True:
         time.sleep(MONSTER_MOVE_DELAY)
         with lock:
-            move_random_monster()
+            if monsters_can_move:
+                move_random_monster()
 
 
 def client_processing(conn, addr):
