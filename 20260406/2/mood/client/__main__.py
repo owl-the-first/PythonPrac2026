@@ -5,6 +5,7 @@ import sys
 import threading
 from io import StringIO
 from cowsay import cowsay, list_cows, read_dot_cow
+import time
 
 HOST = "localhost"
 PORT = 1337
@@ -137,8 +138,20 @@ class MudClient(cmd.Cmd):
         print("Invalid command")
 
 
+def run_script(client, filename):
+    with open(filename, encoding="utf-8") as script:
+        for line in script:
+            command = line.strip()
+            if command:
+                client.onecmd(command)
+                time.sleep(1)
+
+
 def main():
     username = sys.argv[1]
+    script_file = None
+    if len(sys.argv) == 4 and sys.argv[2] == "--file":
+        script_file = sys.argv[3]
     print("<<< Welcome to Python-MUD 0.1 >>>")
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.connect((HOST, PORT))
@@ -146,9 +159,12 @@ def main():
         receiver = threading.Thread(target=receive_messages, args=(sock,))
         receiver.daemon = True
         receiver.start()
-        MudClient(sock).cmdloop()
+        client = MudClient(sock)
+        if script_file is None:
+            client.cmdloop()
+        else:
+            run_script(client, script_file)
 
 
 if __name__ == "__main__":
     main()
-
