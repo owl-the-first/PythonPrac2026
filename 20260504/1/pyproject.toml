@@ -16,6 +16,9 @@ dependencies = [
 mood-server = "mood.server.__main__:main"
 mood-client = "mood.client.__main__:main"
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["mood*"]

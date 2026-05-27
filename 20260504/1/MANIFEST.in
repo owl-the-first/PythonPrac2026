@@ -1,0 +1,3 @@
+graft mood/doc_html
+recursive-include mood/server/po *.po *.mo
+global-exclude __pycache__ *.py[cod]
