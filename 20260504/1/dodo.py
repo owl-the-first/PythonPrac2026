@@ -13,6 +13,7 @@ RU_MO = PO_DIR / "ru" / "LC_MESSAGES" / "mood.mo"
 DOC = ROOT / "doc"
 HTML_DIR = DOC / "_build" / "html"
 HTML_INDEX = HTML_DIR / "index.html"
+PACKAGE_DOC = ROOT / "mood" / "doc_html"
 
 
 def remove_file(path):
@@ -31,6 +32,16 @@ def clean_mo():
 def remove_html():
     if DOC.joinpath("_build").exists():
         shutil.rmtree(DOC / "_build")
+
+
+def remove_package_doc():
+    if PACKAGE_DOC.exists():
+        shutil.rmtree(PACKAGE_DOC)
+
+
+def copy_html_to_package():
+    remove_package_doc()
+    shutil.copytree(HTML_DIR, PACKAGE_DOC)
 
 
 def task_pot():
@@ -94,5 +105,30 @@ def task_test():
             f"cd {ROOT} && python -m unittest test_server.py",
         ],
         "task_dep": ["i18n"],
+        "file_dep": file_dep,
+    }
+
+
+def task_packagedoc():
+    return {
+        "actions": [copy_html_to_package],
+        "task_dep": ["html"],
+        "targets": [PACKAGE_DOC / "index.html"],
+        "clean": [remove_package_doc],
+    }
+
+
+def task_wheel():
+    file_dep = [ROOT / "pyproject.toml"]
+    file_dep += [
+        path
+        for path in MOOD.rglob("*")
+        if path.is_file() and "__pycache__" not in path.parts
+    ]
+    return {
+        "actions": [
+            "python -m build --wheel",
+        ],
+        "task_dep": ["i18n", "packagedoc"],
         "file_dep": file_dep,
     }

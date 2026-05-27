@@ -133,15 +133,13 @@ class MudClient(cmd.Cmd):
             self.send_command(f"movemonsters {args[0]}")
         else:
             print("Invalid arguments")
-    
-    
+
     def do_documentation(self, arg):
         if arg:
             print("Invalid arguments")
             return
         doc_path = Path(__file__).parents[2] / "doc_html" / "index.html"
         webbrowser.open(doc_path.resolve().as_uri())
-        
 
     def do_attack(self, arg):
         args = shlex.split(arg)
