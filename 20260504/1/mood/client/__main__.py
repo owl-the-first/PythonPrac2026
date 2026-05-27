@@ -139,7 +139,10 @@ class MudClient(cmd.Cmd):
             print("Invalid arguments")
             return
         doc_path = Path(__file__).parents[1] / "doc_html" / "index.html"
-        webbrowser.open(doc_path.resolve().as_uri())
+        doc_url = doc_path.resolve().as_uri()
+        print(f"Documentation: {doc_url}")
+        if not webbrowser.open(doc_url):
+            print("Cannot open browser")
 
     def do_attack(self, arg):
         args = shlex.split(arg)
