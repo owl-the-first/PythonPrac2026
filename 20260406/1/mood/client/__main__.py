@@ -137,12 +137,18 @@ class MudClient(cmd.Cmd):
         print("Invalid command")
 
 
-username = sys.argv[1]
-print("<<< Welcome to Python-MUD 0.1 >>>")
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-    sock.connect((HOST, PORT))
-    sock.sendall((username + "\n").encode())
-    receiver = threading.Thread(target=receive_messages, args=(sock,))
-    receiver.daemon = True
-    receiver.start()
-    MudClient(sock).cmdloop()
+def main():
+    username = sys.argv[1]
+    print("<<< Welcome to Python-MUD 0.1 >>>")
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.connect((HOST, PORT))
+        sock.sendall((username + "\n").encode())
+        receiver = threading.Thread(target=receive_messages, args=(sock,))
+        receiver.daemon = True
+        receiver.start()
+        MudClient(sock).cmdloop()
+
+
+if __name__ == "__main__":
+    main()
+
