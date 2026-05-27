@@ -118,6 +118,8 @@ def movemonsters(args):
 
 def get_translation(username):
     locale_name = locales.get(username, DEFAULT_LOCALE)
+    if locale_name == RU_LOCALE:
+        locale_name = "ru"
     return gettext.translation(
         TEXT_DOMAIN,
         localedir=LOCALE_DIR,
