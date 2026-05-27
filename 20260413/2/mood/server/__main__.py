@@ -97,7 +97,7 @@ def movemonsters(args):
         return "Invalid arguments"
     monsters_can_move = args[0] == "on"
     return f"Moving monsters: {args[0]}"
-    
+
 
 def get_translator(username):
     locale_name = locales.get(username, DEFAULT_LOCALE)
@@ -116,8 +116,8 @@ def set_locale(username, args):
     locales[username] = args[0]
     translate = get_translator(username)
     return translate("Set up locale: {locale}").format(locale=args[0])
-    
-    
+
+
 def handle_command(username, line):
     parts = shlex.split(line)
     command = parts[0]

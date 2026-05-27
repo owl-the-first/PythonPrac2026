@@ -90,7 +90,7 @@ def movemonsters(args):
         return "Invalid arguments"
     monsters_can_move = args[0] == "on"
     return f"Moving monsters: {args[0]}"
-    
+
 
 def handle_command(username, line):
     parts = shlex.split(line)
