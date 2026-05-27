@@ -1,0 +1,9 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: MOOD 1.0\n"
+"Language: ru\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
+
+msgid "Set up locale: {locale}"
+msgstr "Установлена локаль: {locale}"

@@ -3,7 +3,13 @@ import shlex
 import socket
 import threading
 import time
+import gettext
+from pathlib import Path
 
+TEXT_DOMAIN = "mood"
+LOCALE_DIR = Path(__file__).parent / "po"
+DEFAULT_LOCALE = "en"
+RU_LOCALE = "ru_RU.UTF8"
 HOST = "localhost"
 PORT = 1337
 FIELD_SIZE = 10
@@ -93,11 +99,23 @@ def movemonsters(args):
     return f"Moving monsters: {args[0]}"
     
 
+def get_translator(username):
+    locale_name = locales.get(username, DEFAULT_LOCALE)
+    translation = gettext.translation(
+        TEXT_DOMAIN,
+        localedir=LOCALE_DIR,
+        languages=[locale_name],
+        fallback=True,
+    )
+    return translation.gettext
+
+
 def set_locale(username, args):
     if len(args) != 1:
         return "Invalid arguments"
     locales[username] = args[0]
-    return f"Set up locale: {args[0]}"
+    translate = get_translator(username)
+    return translate("Set up locale: {locale}").format(locale=args[0])
     
     
 def handle_command(username, line):
