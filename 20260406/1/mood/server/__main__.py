@@ -1,10 +1,13 @@
+import random
 import shlex
 import socket
 import threading
+import time
 
 HOST = "localhost"
 PORT = 1337
 FIELD_SIZE = 10
+MONSTER_MOVE_DELAY = 30
 players = {}
 clients = {}
 monsters = {}
@@ -15,10 +18,9 @@ def send(conn, message):
     conn.sendall((message + "\n").encode())
 
 
-def broadcast(message, exclude=None):
-    for username, conn in list(clients.items()):
-        if username != exclude:
-            send(conn, message)
+def broadcast(message):
+    for conn in list(clients.values()):
+        send(conn, message)
 
 
 def move(username, dx, dy):
@@ -75,6 +77,12 @@ def attack(args):
     return "\n".join(answer)
 
 
+def sayall(username, args):
+    message = args[0]
+    broadcast(f"{username}: {message}")
+    return ""
+
+
 def handle_command(username, line):
     parts = shlex.split(line)
     command = parts[0]
@@ -90,10 +98,51 @@ def handle_command(username, line):
         broadcast(f"{username}: {answer}")
         return answer
     if command == "sayall":
-        message = args[0]
-        broadcast(f"{username}: {message}", exclude=username)
-        return f"{username}: {message}"
+        return sayall(username, args)
     return "Invalid command"
+
+
+def monster_direction():
+    return random.choice([
+        ("up", 0, -1),
+        ("down", 0, 1),
+        ("left", -1, 0),
+        ("right", 1, 0),
+    ])
+
+
+def players_at(x, y):
+    result = []
+    for username, coords in players.items():
+        if coords == (x, y):
+            result.append(clients[username])
+    return result
+
+
+def move_random_monster():
+    if not monsters:
+        return
+    old_coords = random.choice(list(monsters))
+    name, hello, hp = monsters[old_coords]
+    direction, dx, dy = monster_direction()
+    old_x, old_y = old_coords
+    new_x = (old_x + dx) % FIELD_SIZE
+    new_y = (old_y + dy) % FIELD_SIZE
+    new_coords = (new_x, new_y)
+    if new_coords in monsters:
+        return
+    del monsters[old_coords]
+    monsters[new_coords] = (name, hello, hp)
+    broadcast(f"{name} moved one cell {direction}")
+    for conn in players_at(new_x, new_y):
+        send(conn, f"MONSTER {name} {hello}")
+
+
+def move_monsters_periodically():
+    while True:
+        time.sleep(MONSTER_MOVE_DELAY)
+        with lock:
+            move_random_monster()
 
 
 def client_processing(conn, addr):
@@ -127,13 +176,25 @@ def client_processing(conn, addr):
         conn.close()
 
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind((HOST, PORT))
-    server.listen()
-    print("Server started")
-    while True:
-        conn, addr = server.accept()
-        thread = threading.Thread(target=client_processing, args=(conn, addr))
-        thread.daemon = True
-        thread.start()
+def main():
+    mover = threading.Thread(target=move_monsters_periodically)
+    mover.daemon = True
+    mover.start()
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind((HOST, PORT))
+        server.listen()
+        print("Server started")
+        while True:
+            conn, addr = server.accept()
+            thread = threading.Thread(
+                target=client_processing,
+                args=(conn, addr),
+            )
+            thread.daemon = True
+            thread.start()
+
+
+if __name__ == "__main__":
+    main()
+
