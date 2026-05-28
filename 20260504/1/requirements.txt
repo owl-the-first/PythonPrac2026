@@ -1,0 +1,7 @@
+build
+doit
+flake8
+pydocstyle
+sphinx
+Babel
+python-cowsay
