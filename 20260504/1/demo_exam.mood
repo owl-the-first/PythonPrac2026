@@ -1,0 +1,6 @@
+movemonsters off
+addmon dragon hello "Who goes there?" hp 21 coords 1 2
+right
+down
+down
+attack dragon with sword
