@@ -119,16 +119,11 @@ def task_packagedoc():
 
 
 def task_wheel():
-    file_dep = [ROOT / "pyproject.toml"]
-    file_dep += [
-        path
-        for path in MOOD.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
-    ]
     return {
         "actions": [
+            f"sphinx-build -b html {DOC} {HTML_DIR}",
+            copy_html_to_package,
+            f"pybabel compile -d {PO_DIR} -D mood",
             "python -m build --wheel",
         ],
-        "task_dep": ["i18n", "packagedoc"],
-        "file_dep": file_dep,
     }
